@@ -48,6 +48,15 @@ export const getEmailLogs = (params) => {
   return request(`/api/email/logs${query ? '?' + query : ''}`)
 }
 
+// Workflows
+export const getWorkflowForms = () => request('/api/workflows/forms')
+export const getWorkflowRecipients = (formId) => request(`/api/workflows/forms/${encodeURIComponent(formId)}/recipients`)
+
+// Forms
+export const getForms = () => request('/api/forms')
+export const createForm = (form) => request('/api/forms', { method: 'POST', body: JSON.stringify(form) })
+export const deleteForm = (id) => request(`/api/forms/${encodeURIComponent(id)}`, { method: 'DELETE' })
+
 // Settings
 export const getSmtpSettings = () => request('/api/settings/smtp')
 export const updateSmtpSettings = (s) => request('/api/settings/smtp', { method: 'PUT', body: JSON.stringify(s) })

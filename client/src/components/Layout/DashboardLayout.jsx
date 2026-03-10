@@ -2,7 +2,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import {
   LayoutDashboard, Users, FileText, Send, ScrollText,
-  Settings, LogOut, Menu, X, Mail
+  Settings, LogOut, Menu, X, Mail, ClipboardList, GitBranch
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -10,6 +10,8 @@ const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/clients', icon: Users, label: 'Clients' },
   { to: '/templates', icon: FileText, label: 'Templates' },
+  { to: '/forms', icon: ClipboardList, label: 'Forms' },
+  { to: '/workflows', icon: GitBranch, label: 'Workflows' },
   { to: '/send', icon: Send, label: 'Send Email' },
   { to: '/logs', icon: ScrollText, label: 'Email Logs' },
   { to: '/settings', icon: Settings, label: 'SMTP Settings' },

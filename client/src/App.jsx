@@ -10,6 +10,8 @@ import TemplateList from './components/Templates/TemplateList'
 import SendEmailPage from './components/SendEmail/SendEmailPage'
 import EmailLogList from './components/Logs/EmailLogList'
 import SmtpSettings from './components/Settings/SmtpSettings'
+import FormList from './components/Forms/FormList'
+import WorkflowPage from './components/Workflows/WorkflowPage'
 
 export default function App() {
   const [session, setSession] = useState(null)
@@ -42,6 +44,8 @@ export default function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/clients" element={<ClientList />} />
           <Route path="/templates" element={<TemplateList />} />
+          <Route path="/forms" element={<FormList />} />
+          <Route path="/workflows" element={<WorkflowPage />} />
           <Route path="/send" element={<SendEmailPage />} />
           <Route path="/logs" element={<EmailLogList />} />
           <Route path="/settings" element={<SmtpSettings />} />

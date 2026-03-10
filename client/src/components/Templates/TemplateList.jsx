@@ -1,12 +1,14 @@
 import { useState, useEffect, useRef } from 'react'
-import { getTemplates, createTemplate, updateTemplate, deleteTemplate } from '../../lib/api'
-import { Plus, Pencil, Trash2, Copy, X, Eye, Code } from 'lucide-react'
+import { getTemplates, createTemplate, updateTemplate, deleteTemplate, getForms } from '../../lib/api'
+import { Plus, Pencil, Trash2, Copy, X, Eye, Code, Link } from 'lucide-react'
 import toast from 'react-hot-toast'
 
-function TemplateModal({ template, onClose, onSave }) {
-  const [form, setForm] = useState(template || { name: '', subject: '', body: '', formstack_url: '' })
+function TemplateModal({ template, onClose, onSave, forms }) {
+  const [form, setForm] = useState(template || { name: '', subject: '', body: '', form_url: '' })
   const [saving, setSaving] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
+  const [selectedFormId, setSelectedFormId] = useState('')
+  const bodyRef = useRef(null)
 
   const sampleData = {
     first_name: 'John',
@@ -15,15 +17,17 @@ function TemplateModal({ template, onClose, onSave }) {
     company: 'Acme Inc'
   }
 
-  const sampleFormstackUrl = form.formstack_url || 'https://formstack.com/your-form'
-  const formstackButtonHtml = `<a href="${sampleFormstackUrl}" target="_blank" style="display:inline-block;padding:12px 28px;background-color:#4F46E5;color:#ffffff;text-decoration:none;border-radius:6px;font-weight:600;font-size:16px;margin:8px 4px;">Fill Out the Form</a>`
+  // Find the selected form's URL for preview
+  const selectedForm = forms.find(f => f.id === selectedFormId)
+  const formUrl = form.form_url || selectedForm?.tally_url || 'https://tally.so/r/example'
+  const formButtonHtml = `<a href="${formUrl}" target="_blank" style="display:inline-block;padding:12px 28px;background-color:#4F46E5;color:#ffffff;text-decoration:none;border-radius:6px;font-weight:600;font-size:16px;margin:8px 4px;">Fill Out the Form</a>`
 
   let previewBody = form.body
     .replace(/\{\{first_name\}\}/g, sampleData.first_name)
     .replace(/\{\{last_name\}\}/g, sampleData.last_name)
     .replace(/\{\{email\}\}/g, sampleData.email)
     .replace(/\{\{company\}\}/g, sampleData.company)
-    .replace(/\{\{formstack_link\}\}/g, formstackButtonHtml)
+    .replace(/\{\{form_link\}\}/g, formButtonHtml)
 
   if (!previewBody.trim().startsWith('<')) {
     previewBody = previewBody.replace(/\n/g, '<br>')
@@ -42,7 +46,34 @@ function TemplateModal({ template, onClose, onSave }) {
   }
 
   const insertPlaceholder = (ph) => {
-    setForm({ ...form, body: form.body + `{{${ph}}}` })
+    const textarea = bodyRef.current
+    if (textarea) {
+      const start = textarea.selectionStart
+      const end = textarea.selectionEnd
+      const text = form.body
+      const newBody = text.substring(0, start) + `{{${ph}}}` + text.substring(end)
+      setForm({ ...form, body: newBody })
+      // restore cursor after the inserted placeholder
+      setTimeout(() => {
+        textarea.selectionStart = textarea.selectionEnd = start + ph.length + 4
+        textarea.focus()
+      }, 0)
+    } else {
+      setForm({ ...form, body: form.body + `{{${ph}}}` })
+    }
+  }
+
+  const insertFormLink = () => {
+    if (!selectedFormId) {
+      toast.error('Select a form first')
+      return
+    }
+    const f = forms.find(f => f.id === selectedFormId)
+    if (!f) return
+    // Store the tally_url in form_url field
+    setForm({ ...form, form_url: f.tally_url })
+    insertPlaceholder('form_link')
+    toast.success(`"${f.name}" link inserted`)
   }
 
   return (
@@ -66,22 +97,35 @@ function TemplateModal({ template, onClose, onSave }) {
           </div>
 
           <div>
-            <label className="label">Formstack Link (Optional)</label>
-            <input
-              className="input"
-              value={form.formstack_url || ''}
-              onChange={e => setForm({ ...form, formstack_url: e.target.value })}
-              placeholder="https://formstack.com/forms/your-form"
-              type="url"
-            />
-            <p className="text-xs text-gray-400 mt-1">Use <code className="bg-gray-100 px-1 rounded">{'{{formstack_link}}'}</code> in the body to insert this URL</p>
+            <label className="label">Insert Form Link</label>
+            <div className="flex gap-2">
+              <select
+                className="input flex-1"
+                value={selectedFormId}
+                onChange={e => setSelectedFormId(e.target.value)}
+              >
+                <option value="">Select a form...</option>
+                {forms.map(f => (
+                  <option key={f.id} value={f.id}>{f.name} ({f.tally_form_id})</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={insertFormLink}
+                className="btn-secondary flex items-center gap-1.5 whitespace-nowrap"
+              >
+                <Link className="w-4 h-4" />
+                Insert Link
+              </button>
+            </div>
+            <p className="text-xs text-gray-400 mt-1">Select a form and click "Insert Link" to add it at the cursor position in the body</p>
           </div>
 
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label className="text-sm font-medium text-gray-600">Body (HTML)</label>
-              <div className="flex gap-2">
-                {['first_name', 'last_name', 'email', 'company', 'formstack_link'].map(ph => (
+              <div className="flex gap-2 flex-wrap">
+                {['first_name', 'last_name', 'email', 'company'].map(ph => (
                   <button
                     key={ph}
                     type="button"
@@ -94,6 +138,7 @@ function TemplateModal({ template, onClose, onSave }) {
               </div>
             </div>
             <textarea
+              ref={bodyRef}
               className="input min-h-[240px] font-mono text-sm"
               value={form.body}
               onChange={e => setForm({ ...form, body: e.target.value })}
@@ -115,8 +160,7 @@ function TemplateModal({ template, onClose, onSave }) {
                     .replace(/\{\{first_name\}\}/g, sampleData.first_name)
                     .replace(/\{\{last_name\}\}/g, sampleData.last_name)
                     .replace(/\{\{email\}\}/g, sampleData.email)
-                    .replace(/\{\{company\}\}/g, sampleData.company)
-                    .replace(/\{\{formstack_link\}\}/g, sampleFormstackUrl)}
+                    .replace(/\{\{company\}\}/g, sampleData.company)}
                 </div>
                 <div className="border-t border-gray-100 pt-3" dangerouslySetInnerHTML={{ __html: previewBody }} />
               </div>
@@ -137,12 +181,15 @@ function TemplateModal({ template, onClose, onSave }) {
 
 export default function TemplateList() {
   const [templates, setTemplates] = useState([])
+  const [forms, setForms] = useState([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(undefined)
 
   const load = async () => {
     try {
-      setTemplates(await getTemplates())
+      const [t, f] = await Promise.all([getTemplates(), getForms()])
+      setTemplates(t)
+      setForms(f)
     } catch (err) {
       toast.error(err.message)
     }
@@ -164,7 +211,7 @@ export default function TemplateList() {
 
   const handleDuplicate = async (t) => {
     try {
-      await createTemplate({ name: `${t.name} (Copy)`, subject: t.subject, body: t.body, formstack_url: t.formstack_url })
+      await createTemplate({ name: `${t.name} (Copy)`, subject: t.subject, body: t.body, form_url: t.form_url })
       toast.success('Template duplicated')
       load()
     } catch (err) {
@@ -234,6 +281,7 @@ export default function TemplateList() {
           template={modal}
           onClose={() => setModal(undefined)}
           onSave={handleSave}
+          forms={forms}
         />
       )}
     </div>
