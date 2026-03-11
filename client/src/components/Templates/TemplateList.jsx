@@ -45,21 +45,21 @@ function TemplateModal({ template, onClose, onSave, forms }) {
     setSaving(false)
   }
 
-  const insertPlaceholder = (ph) => {
+  const insertPlaceholder = (ph, extraFields = {}) => {
     const textarea = bodyRef.current
     if (textarea) {
       const start = textarea.selectionStart
       const end = textarea.selectionEnd
       const text = form.body
       const newBody = text.substring(0, start) + `{{${ph}}}` + text.substring(end)
-      setForm({ ...form, body: newBody })
+      setForm({ ...form, ...extraFields, body: newBody })
       // restore cursor after the inserted placeholder
       setTimeout(() => {
         textarea.selectionStart = textarea.selectionEnd = start + ph.length + 4
         textarea.focus()
       }, 0)
     } else {
-      setForm({ ...form, body: form.body + `{{${ph}}}` })
+      setForm({ ...form, ...extraFields, body: form.body + `{{${ph}}}` })
     }
   }
 
@@ -70,9 +70,8 @@ function TemplateModal({ template, onClose, onSave, forms }) {
     }
     const f = forms.find(f => f.id === selectedFormId)
     if (!f) return
-    // Store the tally_url in form_url field
-    setForm({ ...form, form_url: f.tally_url })
-    insertPlaceholder('form_link')
+    // Insert placeholder AND set form_url in one state update
+    insertPlaceholder('form_link', { form_url: f.tally_url })
     toast.success(`"${f.name}" link inserted`)
   }
 
